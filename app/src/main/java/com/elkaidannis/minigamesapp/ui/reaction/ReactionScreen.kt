@@ -26,11 +26,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlin.random.Random
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -39,18 +42,46 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 
+private fun randomTarget() = Random.nextLong(5_000L, 20_001L)
+private fun randomStep()   = Random.nextLong(5L, 25L) * if (Random.nextBoolean()) 1L else -1L
+private fun randomStart(target: Long, step: Long) =
+    if (step > 0) Random.nextLong(0L, target)               // monte → part en dessous
+    else          Random.nextLong(target, target + 15_001L) // descend → part au dessus
+
 @Composable
 fun ReactionScreen(onBackClick: () -> Unit) {
-    var elapsedMs        by remember { mutableLongStateOf(0L) }
-    var targetTimeMs     by remember { mutableLongStateOf(5_000L) }
-    var step             by remember { mutableLongStateOf(10L) }
-    var isRunning        by remember { mutableStateOf(false) }
-    var isShowingResult  by remember { mutableStateOf(false) }
+    var targetTimeMs    by remember { mutableLongStateOf(randomTarget()) }
+    var step            by remember { mutableLongStateOf(randomStep()) }
+    var elapsedMs       by remember { mutableLongStateOf(randomStart(targetTimeMs, step)) }
+    var isRunning       by remember { mutableStateOf(false) }
+    var isShowingResult by remember { mutableStateOf(false) }
+    var isBlind         by remember { mutableStateOf(false) }
+    var blindThreshold  by remember { mutableLongStateOf(Random.nextLong(1_000L, 4_001L)) }
+
+    LaunchedEffect(isRunning) {
+        var ticksUntilSpeedChange = Random.nextLong(150L, 401L)
+        while (isRunning) {
+            delay(10L)
+            elapsedMs += step
+            if (!isBlind && abs(elapsedMs - targetTimeMs) < blindThreshold) {
+                isBlind = true
+            }
+            ticksUntilSpeedChange--
+            if (ticksUntilSpeedChange <= 0L) {
+                step = Random.nextLong(5L, 25L) * if (step > 0) 1L else -1L
+                ticksUntilSpeedChange = Random.nextLong(150L, 401L)
+            }
+        }
+    }
 
     fun restartGame() {
-        elapsedMs       = 0L
-        targetTimeMs    = 5_000L
-        step            = 10L
+        val newTarget = randomTarget()
+        val newStep   = randomStep()
+        targetTimeMs    = newTarget
+        step            = newStep
+        elapsedMs       = randomStart(newTarget, newStep)
+        blindThreshold  = Random.nextLong(1_000L, 4_001L)
+        isBlind         = false
         isRunning       = false
         isShowingResult = false
     }
@@ -58,8 +89,8 @@ fun ReactionScreen(onBackClick: () -> Unit) {
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         if (isShowingResult) {
             ResultScreen(
-                elapsedMs    = elapsedMs,
-                targetTimeMs = targetTimeMs,
+                elapsedMs     = elapsedMs,
+                targetTimeMs  = targetTimeMs,
                 onReplayClick = { restartGame() },
                 onHomeClick   = onBackClick,
                 modifier      = Modifier.padding(innerPadding)
@@ -70,6 +101,7 @@ fun ReactionScreen(onBackClick: () -> Unit) {
                 targetTimeMs = targetTimeMs,
                 step         = step,
                 isRunning    = isRunning,
+                isBlind      = isBlind,
                 onBackClick  = onBackClick,
                 onStartClick = { isRunning = true },
                 onStopClick  = { isRunning = false; isShowingResult = true },
@@ -85,6 +117,7 @@ private fun GameScreen(
     targetTimeMs: Long,
     step: Long,
     isRunning: Boolean,
+    isBlind: Boolean,
     onBackClick: () -> Unit,
     onStartClick: () -> Unit,
     onStopClick: () -> Unit,
@@ -101,6 +134,7 @@ private fun GameScreen(
             elapsedMs    = elapsedMs,
             targetTimeMs = targetTimeMs,
             isRunning    = isRunning,
+            isBlind      = isBlind,
             modifier     = Modifier.weight(1f)
         )
         StartStopButton(
@@ -168,7 +202,7 @@ private fun TargetCard(targetTimeMs: Long, step: Long) {
 private fun SpeedBadge(step: Long) {
     Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
         Text(
-            text = "× %.1f vitesse".format(abs(step).toFloat() / 10f),
+            text = "Vitesse variable · ×%.1f".format(abs(step).toFloat() / 10f),
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.primary
@@ -181,28 +215,40 @@ private fun TimerDisplay(
     elapsedMs: Long,
     targetTimeMs: Long,
     isRunning: Boolean,
+    isBlind: Boolean,
     modifier: Modifier = Modifier
 ) {
     val progress = if (targetTimeMs > 0L) (elapsedMs.toFloat() / targetTimeMs.toFloat()).coerceIn(0f, 1f) else 0f
 
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("TIMER", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = if (isBlind) "MODE AVEUGLE" else "TIMER",
+                fontSize = 11.sp,
+                color = if (isBlind) MaterialTheme.colorScheme.error
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = formatTimeDisplay(elapsedMs),
+                text = if (isBlind) "??  ???" else formatTimeDisplay(elapsedMs),
                 fontSize = 56.sp,
                 fontWeight = FontWeight.Medium,
                 fontFamily = FontFamily.Monospace,
-                color = if (isRunning) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
+                color = when {
+                    isBlind    -> MaterialTheme.colorScheme.onSurfaceVariant
+                    isRunning  -> MaterialTheme.colorScheme.primary
+                    else       -> MaterialTheme.colorScheme.onBackground
+                }
             )
             Spacer(modifier = Modifier.height(12.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
+            if (!isBlind) {
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            }
         }
     }
 }
