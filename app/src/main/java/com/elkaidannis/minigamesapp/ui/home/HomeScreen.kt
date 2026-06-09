@@ -24,7 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun HomeScreen(onPlayClick: () -> Unit) {
+fun HomeScreen(
+    onReactionClick: () -> Unit,
+    onWordGameClick: () -> Unit
+) {
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         Column(
             modifier = Modifier
@@ -34,45 +37,55 @@ fun HomeScreen(onPlayClick: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = "🎮", fontSize = 28.sp)
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "MiniGames",
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                text = "testez vos réflexes",
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            HomeHeader()
             Spacer(modifier = Modifier.height(32.dp))
-            Button(
-                onClick = onPlayClick,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                )
-            ) {
-                Text(text = "Jouer", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            }
+            GameButton(label = "Jeu de réaction", onClick = onReactionClick)
+            Spacer(modifier = Modifier.height(12.dp))
+            GameButton(label = "Mot caché", onClick = onWordGameClick)
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "1 jeu disponible",
+                text = "2 jeux disponibles",
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+    }
+}
+
+@Composable
+private fun HomeHeader() {
+    Box(
+        modifier = Modifier
+            .size(64.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(20.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text = "🎮", fontSize = 28.sp)
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+    Text(
+        text = "MiniGames",
+        fontSize = 26.sp,
+        fontWeight = FontWeight.Medium,
+        color = MaterialTheme.colorScheme.onBackground
+    )
+    Text(
+        text = "testez vos réflexes",
+        fontSize = 13.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+@Composable
+private fun GameButton(label: String, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+    ) {
+        Text(text = label, fontSize = 16.sp, fontWeight = FontWeight.Medium)
     }
 }

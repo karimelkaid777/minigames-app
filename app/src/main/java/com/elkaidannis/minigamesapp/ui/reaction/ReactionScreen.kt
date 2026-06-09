@@ -26,14 +26,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import kotlin.random.Random
-import kotlinx.coroutines.delay
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -42,69 +37,32 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 
-private fun randomTarget() = Random.nextLong(5_000L, 20_001L)
-private fun randomStep()   = Random.nextLong(5L, 25L) * if (Random.nextBoolean()) 1L else -1L
-private fun randomStart(target: Long, step: Long) =
-    if (step > 0) Random.nextLong(0L, target)               // monte → part en dessous
-    else          Random.nextLong(target, target + 15_001L) // descend → part au dessus
-
 @Composable
-fun ReactionScreen(onBackClick: () -> Unit) {
-    var targetTimeMs    by remember { mutableLongStateOf(randomTarget()) }
-    var step            by remember { mutableLongStateOf(randomStep()) }
-    var elapsedMs       by remember { mutableLongStateOf(randomStart(targetTimeMs, step)) }
-    var isRunning       by remember { mutableStateOf(false) }
-    var isShowingResult by remember { mutableStateOf(false) }
-    var isBlind         by remember { mutableStateOf(false) }
-    var blindThreshold  by remember { mutableLongStateOf(Random.nextLong(1_000L, 4_001L)) }
-
-    LaunchedEffect(isRunning) {
-        var ticksUntilSpeedChange = Random.nextLong(150L, 401L)
-        while (isRunning) {
-            delay(10L)
-            elapsedMs += step
-            if (!isBlind && abs(elapsedMs - targetTimeMs) < blindThreshold) {
-                isBlind = true
-            }
-            ticksUntilSpeedChange--
-            if (ticksUntilSpeedChange <= 0L) {
-                step = Random.nextLong(5L, 25L) * if (step > 0) 1L else -1L
-                ticksUntilSpeedChange = Random.nextLong(150L, 401L)
-            }
-        }
-    }
-
-    fun restartGame() {
-        val newTarget = randomTarget()
-        val newStep   = randomStep()
-        targetTimeMs    = newTarget
-        step            = newStep
-        elapsedMs       = randomStart(newTarget, newStep)
-        blindThreshold  = Random.nextLong(1_000L, 4_001L)
-        isBlind         = false
-        isRunning       = false
-        isShowingResult = false
-    }
+fun ReactionScreen(
+    onBackClick: () -> Unit,
+    viewModel: ReactionViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
-        if (isShowingResult) {
+        if (uiState.isShowingResult) {
             ResultScreen(
-                elapsedMs     = elapsedMs,
-                targetTimeMs  = targetTimeMs,
-                onReplayClick = { restartGame() },
+                elapsedMs     = uiState.elapsedMs,
+                targetTimeMs  = uiState.targetTimeMs,
+                onReplayClick = viewModel::reset,
                 onHomeClick   = onBackClick,
                 modifier      = Modifier.padding(innerPadding)
             )
         } else {
             GameScreen(
-                elapsedMs    = elapsedMs,
-                targetTimeMs = targetTimeMs,
-                step         = step,
-                isRunning    = isRunning,
-                isBlind      = isBlind,
+                elapsedMs    = uiState.elapsedMs,
+                targetTimeMs = uiState.targetTimeMs,
+                step         = uiState.step,
+                isRunning    = uiState.isRunning,
+                isBlind      = uiState.isBlind,
                 onBackClick  = onBackClick,
-                onStartClick = { isRunning = true },
-                onStopClick  = { isRunning = false; isShowingResult = true },
+                onStartClick = viewModel::startGame,
+                onStopClick  = viewModel::stopTimer,
                 modifier     = Modifier.padding(innerPadding)
             )
         }
