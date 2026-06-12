@@ -1,8 +1,5 @@
 # MiniGames App
 
-Application Android (Kotlin / Jetpack Compose) regroupant deux mini-jeux : un **jeu de réaction**
-et **Mot caché**. TP noté — Séance 2 (Architecture & Navigation), CNAM 1ʳᵉ année.
-
 ## Auteurs
 
 - Karim EL KAID
