@@ -6,7 +6,7 @@ et **Mot caché**. TP noté — Séance 2 (Architecture & Navigation), CNAM 1ʳ�
 ## Auteurs
 
 - Karim EL KAID
-- Marc GEHI
+- Ricardo ANNIS
 
 ## Branche à tester
 
