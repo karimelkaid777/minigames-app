@@ -1,7 +1,11 @@
 package com.elkaidannis.minigamesapp.ui.reaction
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.elkaidannis.minigamesapp.data.AppDatabase
+import com.elkaidannis.minigamesapp.data.Score
+import com.elkaidannis.minigamesapp.data.ScoreRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,13 +45,20 @@ data class ReactionUiState(
     val isBlind: Boolean = false
 )
 
-class ReactionViewModel : ViewModel() {
+class ReactionViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val repository = ScoreRepository(
+        AppDatabase.getDatabase(application).scoreDao()
+    )
+
     private val _uiState = MutableStateFlow(generateRound())
     val uiState: StateFlow<ReactionUiState> = _uiState.asStateFlow()
 
     private var timerJob: Job? = null
+    private var playerName: String = ""
 
-    fun startGame() {
+    fun startGame(playerName: String) {
+        this.playerName = playerName
         _uiState.update { it.copy(isRunning = true) }
         timerJob = viewModelScope.launch { runTimer() }
     }
@@ -55,11 +66,21 @@ class ReactionViewModel : ViewModel() {
     fun stopTimer() {
         timerJob?.cancel()
         _uiState.update { it.copy(isRunning = false, isShowingResult = true) }
+        saveScore()
     }
 
     fun reset() {
         timerJob?.cancel()
         _uiState.value = generateRound()
+    }
+
+    private fun saveScore() {
+        val errorMs = abs(_uiState.value.elapsedMs - _uiState.value.targetTimeMs).toInt()
+        viewModelScope.launch {
+            repository.insertScore(
+                Score(playerName = playerName, gameName = "Réaction", score = errorMs)
+            )
+        }
     }
 
     private suspend fun runTimer() {

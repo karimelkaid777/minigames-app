@@ -1,7 +1,11 @@
 package com.elkaidannis.minigamesapp.ui.wordgame
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.elkaidannis.minigamesapp.data.AppDatabase
+import com.elkaidannis.minigamesapp.data.Score
+import com.elkaidannis.minigamesapp.data.ScoreRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +19,11 @@ private const val EXTRA_LETTERS_COUNT = 3
 private const val ONE_SECOND_MS = 1_000L
 private const val HINT_PENALTY = 1
 
-class WordGameViewModel : ViewModel() {
+class WordGameViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val repository = ScoreRepository(
+        AppDatabase.getDatabase(application).scoreDao()
+    )
 
     enum class Phase { PLAYING, GAME_OVER }
 
@@ -46,12 +54,14 @@ class WordGameViewModel : ViewModel() {
 
     private var hiddenWord: String = ""
     private var timerJob: Job? = null
+    private var playerName: String = ""
 
     private val _uiState =
         MutableStateFlow(buildRoundWithNewWord(score = 0, remainingSeconds = GAME_DURATION_SECONDS))
     val uiState: StateFlow<UiState> = _uiState.asStateFlow()
 
-    fun startGame() {
+    fun startGame(playerName: String) {
+        this.playerName = playerName
         timerJob?.cancel()
         _uiState.value = buildRoundWithNewWord(score = 0, remainingSeconds = GAME_DURATION_SECONDS)
         startCountdown()
@@ -102,7 +112,7 @@ class WordGameViewModel : ViewModel() {
     }
 
     fun reset() {
-        startGame()
+        startGame(playerName)
     }
 
     private fun startCountdown() {
@@ -118,6 +128,15 @@ class WordGameViewModel : ViewModel() {
     private fun endGame() {
         sessionBestScore = maxOf(sessionBestScore, _uiState.value.score)
         _uiState.update { it.copy(phase = Phase.GAME_OVER, bestScore = sessionBestScore) }
+        saveScore()
+    }
+
+    private fun saveScore() {
+        viewModelScope.launch {
+            repository.insertScore(
+                Score(playerName = playerName, gameName = "Mot caché", score = _uiState.value.score)
+            )
+        }
     }
 
     private fun clearSelection() {

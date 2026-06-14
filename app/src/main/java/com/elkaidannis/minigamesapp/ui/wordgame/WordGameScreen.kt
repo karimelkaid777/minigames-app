@@ -43,12 +43,13 @@ private const val GRID_SIDE = 3
 
 @Composable
 fun WordGameScreen(
+    playerName: String,
     onBackClick: () -> Unit,
     viewModel: WordGameViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.startGame() }
+    LaunchedEffect(Unit) { viewModel.startGame(playerName) }
 
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { innerPadding ->
         val screenModifier = Modifier
