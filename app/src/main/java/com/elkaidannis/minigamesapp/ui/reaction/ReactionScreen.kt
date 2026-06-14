@@ -39,6 +39,7 @@ import kotlin.math.abs
 
 @Composable
 fun ReactionScreen(
+    playerName: String,
     onBackClick: () -> Unit,
     viewModel: ReactionViewModel = viewModel()
 ) {
@@ -61,7 +62,7 @@ fun ReactionScreen(
                 isRunning    = uiState.isRunning,
                 isBlind      = uiState.isBlind,
                 onBackClick  = onBackClick,
-                onStartClick = viewModel::startGame,
+                onStartClick = { viewModel.startGame(playerName) },
                 onStopClick  = viewModel::stopTimer,
                 modifier     = Modifier.padding(innerPadding)
             )

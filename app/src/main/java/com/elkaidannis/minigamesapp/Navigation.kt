@@ -6,7 +6,10 @@ import kotlinx.serialization.Serializable
 object Home
 
 @Serializable
-object Reaction
+data class Reaction(val playerName: String)
 
 @Serializable
-object WordGame
+data class WordGame(val playerName: String)
+
+@Serializable
+object Leaderboard
